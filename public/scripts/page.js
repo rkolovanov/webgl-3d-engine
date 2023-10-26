@@ -131,7 +131,8 @@ export function createSceneObject(type) {
 export function clearSceneObjects() {
     SCENE_OBJECTS = [];
     $("#objects").html("");
-    renderScene(SCENE_OBJECTS, CAMERA_OBJECT);
+    onParametersChanged();
+    renderScene(SCENE_OBJECTS, CAMERA_OBJECT, RENDER_PARAMETERS);
 }
 
 /**
