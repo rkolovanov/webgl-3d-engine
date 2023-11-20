@@ -1,10 +1,16 @@
-import {toRadian} from "./third-party/gl-matrix/common.js";
-import {initializeWebGl, renderScene} from "./engine/webgl.js";
-import {SceneObject, Camera} from "./engine/objects.js";
+import {vec3} from "./third-party/gl-matrix/index.js";
+import {toRadian, toDegree} from "./third-party/gl-matrix/common.js";
+import {SceneObject, Camera, PointLight, DirectionalLight, Light} from "./engine/objects.js";
+import {initializeWebGl, setClearColor, renderScene} from "./engine/webgl.js";
+import {Input} from "./engine/input.js";
 import {hexToColor, colorToHex} from "./engine/color-utils.js"
 
-let CAMERA_OBJECT = new Camera();
-let SCENE_OBJECTS = [];
+let FPS = 60;
+let USER_INPUT = new Input();
+let CAMERA_OBJECT = new Camera(vec3.fromValues(-10, 0, 0));
+let POINT_LIGHT = new PointLight(vec3.fromValues(-5, 5, 5));
+let DIRECTIONAL_LIGHT = new DirectionalLight(vec3.fromValues(5, 5, 5));
+let SCENE_OBJECTS = [POINT_LIGHT, DIRECTIONAL_LIGHT];
 let RENDER_PARAMETERS = {"backgroundColor": "#000000"};
 
 /**
@@ -12,7 +18,17 @@ let RENDER_PARAMETERS = {"backgroundColor": "#000000"};
  */
 export function onPageLoad() {
     initializeWebGl();
+    USER_INPUT.initialize();
+    setInterval(exec, 1000 / FPS);
+}
+
+/**
+ * Главный цикл обработки. Обрабатывает события с клавиатуры и мыши, получает значения из input-ов, после чего рендерит сцену.
+ */
+function exec() {
+    USER_INPUT.processInput(CAMERA_OBJECT, 1 / FPS);
     onParametersChanged();
+    renderScene(SCENE_OBJECTS, CAMERA_OBJECT, POINT_LIGHT, DIRECTIONAL_LIGHT, RENDER_PARAMETERS);
 }
 
 /**
@@ -39,6 +55,7 @@ export function createSceneObject(type) {
     switch (type) {
         case "cube": typeName = "Куб"; break;
         case "sphere": typeName = "Сфера"; break;
+        case "sdr": typeName = "Поздравление"; break;
     }
 
     if (typeName === null) {
@@ -111,55 +128,40 @@ export function createSceneObject(type) {
     let objectsDiv = $("#objects");
     objectsDiv.append(objectHtml);
 
-    let object = null;
-    switch (type) {
-        case "cube": object = new SceneObject(); break;
-        case "sphere": object = new SceneObject(); break;
-    }
-
-    if (object !== null) {
-        object.loadFromObjFile(type, () => {
-            SCENE_OBJECTS.push(object);
-            onParametersChanged();
-        });
-    }
+    let object = new SceneObject();
+    object.loadFromObjFile(type, () => {
+        SCENE_OBJECTS.push(object);
+    });
 }
 
 /**
  * Удаляет все объекты со сцены.
  */
 export function clearSceneObjects() {
-    SCENE_OBJECTS = [];
+    SCENE_OBJECTS = [POINT_LIGHT, DIRECTIONAL_LIGHT];
     $("#objects").html("");
-    onParametersChanged();
-    renderScene(SCENE_OBJECTS, CAMERA_OBJECT, RENDER_PARAMETERS);
 }
 
 /**
  * Обрабатывает изменения в input-элементах от пользователя и применяет изменения к сцене.
  */
 export function onParametersChanged() {
+    // Параметры рендеринга
+    RENDER_PARAMETERS["drawLight"] = document.getElementById(`draw-light`).checked;
+    RENDER_PARAMETERS["drawEdges"] = document.getElementById(`draw-edges`).checked;
+    RENDER_PARAMETERS["drawPolygons"] = document.getElementById(`draw-polygons`).checked;
+    RENDER_PARAMETERS["backgroundColor"] = document.getElementById(`input-background-color`).value;
+    RENDER_PARAMETERS["edgeColor"] = document.getElementById(`input-edge-color`).value;
+
     // Координаты камеры
-    let e_x = document.getElementById(`input-x-camera`);
-    let e_y = document.getElementById(`input-y-camera`);
-    let e_z = document.getElementById(`input-z-camera`);
-    CAMERA_OBJECT.position[0] = Number(e_x.value);
-    CAMERA_OBJECT.position[1] = Number(e_y.value);
-    CAMERA_OBJECT.position[2] = Number(e_z.value);
-    $(`#output-x-camera`).text(e_x.value);
-    $(`#output-y-camera`).text(e_y.value);
-    $(`#output-z-camera`).text(e_z.value);
+    $(`#output-x-camera`).text(CAMERA_OBJECT.position[0].toFixed(3));
+    $(`#output-y-camera`).text(CAMERA_OBJECT.position[1].toFixed(3));
+    $(`#output-z-camera`).text(CAMERA_OBJECT.position[2].toFixed(3));
 
     // Вращение камеры
-    let e_r_x = document.getElementById(`input-x-rotation-camera`);
-    let e_r_y = document.getElementById(`input-y-rotation-camera`);
-    let e_r_z = document.getElementById(`input-z-rotation-camera`);
-    CAMERA_OBJECT.rotation[0] = toRadian(Number(e_r_x.value));
-    CAMERA_OBJECT.rotation[1] = toRadian(Number(e_r_y.value));
-    CAMERA_OBJECT.rotation[2] = toRadian(Number(e_r_z.value));
-    $(`#output-x-rotation-camera`).text(e_r_x.value);
-    $(`#output-y-rotation-camera`).text(e_r_y.value);
-    $(`#output-z-rotation-camera`).text(e_r_z.value);
+    $(`#output-x-rotation-camera`).text(toDegree(CAMERA_OBJECT.rotation[0]).toFixed(3));
+    $(`#output-y-rotation-camera`).text(toDegree(CAMERA_OBJECT.rotation[1]).toFixed(3));
+    $(`#output-z-rotation-camera`).text(toDegree(CAMERA_OBJECT.rotation[2]).toFixed(3));
 
     // Вертикальный FOV
     let fov = document.getElementById(`input-fov-camera`);
@@ -170,8 +172,64 @@ export function onParametersChanged() {
     let projection = document.getElementById(`pers-projection`);
     CAMERA_OBJECT.view_projection = (projection.checked) ? "perspective" : "orthogonal";
 
+    // Материал
+    let e_m_s = document.getElementById(`input-shininess`);
+    RENDER_PARAMETERS["materialShininess"] = Number(e_m_s.value);
+    $(`#output-shininess`).text(e_m_s.value);
+
+    // Позиция точечного света
+    let e_pl_x = document.getElementById(`input-x-point-light`);
+    let e_pl_y = document.getElementById(`input-y-point-light`);
+    let e_pl_z = document.getElementById(`input-z-point-light`);
+    POINT_LIGHT.position[0] = Number(e_pl_x.value);
+    POINT_LIGHT.position[1] = Number(e_pl_y.value);
+    POINT_LIGHT.position[2] = Number(e_pl_z.value);
+    $(`#output-x-point-light`).text(e_pl_x.value);
+    $(`#output-y-point-light`).text(e_pl_y.value);
+    $(`#output-z-point-light`).text(e_pl_z.value);
+
+    // Цвет точечного света
+    let e_pl_d = document.getElementById(`input-diffuse-point-light`);
+    let c = hexToColor(e_pl_d.value);
+    POINT_LIGHT.setColor(c);
+    POINT_LIGHT.color = c;
+    $(`#output-diffuse-point-light`).text(e_pl_d.value);
+
+    // Фоновый цвет точечного света
+    let e_pl_a = document.getElementById(`input-ambient-point-light`);
+    POINT_LIGHT.setAmbientColor(hexToColor(e_pl_a.value));
+    $(`#output-ambient-point-light`).text(e_pl_a.value);
+
+    // Поворот направленного света
+    let e_dl_x = document.getElementById(`input-x-directional-light`);
+    let e_dl_y = document.getElementById(`input-y-directional-light`);
+    let e_dl_z = document.getElementById(`input-z-directional-light`);
+    DIRECTIONAL_LIGHT.position[0] = Number(e_dl_x.value);
+    DIRECTIONAL_LIGHT.position[1] = Number(e_dl_y.value);
+    DIRECTIONAL_LIGHT.position[2] = Number(e_dl_z.value);
+    $(`#output-x-directional-light`).text(e_dl_x.value);
+    $(`#output-y-directional-light`).text(e_dl_y.value);
+    $(`#output-z-directional-light`).text(e_dl_z.value);
+
+    // Цвет направленного света
+    let e_dl_d = document.getElementById(`input-diffuse-directional-light`);
+    c = hexToColor(e_dl_d.value);
+    DIRECTIONAL_LIGHT.setColor(c);
+    DIRECTIONAL_LIGHT.color = c;
+    $(`#output-diffuse-directional-light`).text(e_dl_d.value);
+
+    // Фоновый цвет направленного света
+    let e_dl_a = document.getElementById(`input-ambient-directional-light`);
+    DIRECTIONAL_LIGHT.setAmbientColor(hexToColor(e_dl_a.value));
+    $(`#output-ambient-directional-light`).text(e_dl_a.value);
+
     // Объекты
     for (let i = 0; i < SCENE_OBJECTS.length; ++i) {
+        if(SCENE_OBJECTS[i] instanceof Camera || SCENE_OBJECTS[i] instanceof Light)
+        {
+            continue;
+        }
+
         // Позиция
         let e_x = document.getElementById(`input-x-${i+1}`);
         let e_y = document.getElementById(`input-y-${i+1}`);
@@ -213,10 +271,7 @@ export function onParametersChanged() {
         $(`#output-alpha-${i+1}`).text(e_a.value);
     }
 
-    RENDER_PARAMETERS["drawEdges"] = document.getElementById(`draw-edges`).checked;
-    RENDER_PARAMETERS["drawPolygons"] = document.getElementById(`draw-polygons`).checked;
-    RENDER_PARAMETERS["backgroundColor"] = document.getElementById(`input-background-color`).value;
-    RENDER_PARAMETERS["edgeColor"] = document.getElementById(`input-edge-color`).value;
-
-    renderScene(SCENE_OBJECTS, CAMERA_OBJECT, RENDER_PARAMETERS);
+    // Цвет заднего фона
+    let backgroundColor = hexToColor(RENDER_PARAMETERS["backgroundColor"]);
+    setClearColor(backgroundColor);
 }

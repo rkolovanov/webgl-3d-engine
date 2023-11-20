@@ -23,6 +23,11 @@ var degree = Math.PI / 180;
  * @param {Number} a Angle in Degrees
  */
 
+export function toDegree(a) {
+  let toDegrees = 180 / Math.PI;
+  return a * toDegrees;
+}
+
 export function toRadian(a) {
   return a * degree;
 }

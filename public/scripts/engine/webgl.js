@@ -1,5 +1,6 @@
 import VERTEX_SHADER_SOURCE from "./shaders/vertex_shaders.js";
 import FRAGMENT_SHADER_SOURCE from "./shaders/fragment_shaders.js";
+import {PointLight} from "./objects.js";
 import {hexToColor} from "./color-utils.js";
 
 let GL = null;
@@ -138,60 +139,117 @@ export function initializeWebGl() {
     GL.enable(GL.SAMPLE_ALPHA_TO_COVERAGE);
 }
 
+/**
+ * Устанавливает цвет очистки окна рендеринга.
+ * @param {Color} color
+ */
+export function setClearColor(color) {
+    GL.clearColor(color.r, color.g, color.b, color.a);
+}
 
 /**
  * Выполняет рендеринг сцены на окно рендеринга.
  * @param {SceneObject[]} sceneObjects
  * @param {Camera} camera
+ * @param {PointLight} pointLight
+ * @param {DirectionalLight} directionalLight
  * @param {{}} renderParameters
  */
-export function renderScene(sceneObjects, camera, renderParameters) {
-    let backgroundColor = hexToColor(renderParameters["backgroundColor"]);
-    GL.clearColor(backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a);
+export function renderScene(sceneObjects, camera, pointLight, directionalLight, renderParameters) {
     GL.clear(GL.COLOR_BUFFER_BIT);
     GL.clear(GL.DEPTH_BUFFER_BIT);
 
-    let vertexPositionAttribute = GL.getAttribLocation(PROGRAM, "a_vertexPosition");
-    let vertexColorUniform = GL.getUniformLocation(PROGRAM, "u_vertexColor");
-    let modelMatrixUniform = GL.getUniformLocation(PROGRAM, "u_mMatrix");
-    let viewMatrixUniform = GL.getUniformLocation(PROGRAM, "u_vMatrix");
-    let projectionMatrixUniform = GL.getUniformLocation(PROGRAM, "u_pMatrix");
+    let cameraPositionUniform = GL.getUniformLocation(PROGRAM, "u_cameraPosition");
+    GL.uniform3f(cameraPositionUniform, camera.position[0], camera.position[1], camera.position[2]);
 
+    let lightsUniform = GL.getUniformLocation(PROGRAM, "u_lights[0].diffuse");
+    GL.uniform3f(lightsUniform, pointLight.diffuse.r, pointLight.diffuse.g, pointLight.diffuse.b);
+    lightsUniform = GL.getUniformLocation(PROGRAM, "u_lights[0].ambient");
+    GL.uniform3f(lightsUniform, pointLight.ambient.r, pointLight.ambient.g, pointLight.ambient.b);
+    lightsUniform = GL.getUniformLocation(PROGRAM, "u_lights[0].specular");
+    GL.uniform3f(lightsUniform, pointLight.specular.r, pointLight.specular.g, pointLight.specular.b);
+    lightsUniform = GL.getUniformLocation(PROGRAM, "u_lights[0].position");
+    GL.uniform4f(lightsUniform, pointLight.position[0], pointLight.position[1], pointLight.position[2], 1);
+
+    lightsUniform = GL.getUniformLocation(PROGRAM, "u_lights[1].diffuse");
+    GL.uniform3f(lightsUniform, directionalLight.diffuse.r, directionalLight.diffuse.g, directionalLight.diffuse.b);
+    lightsUniform = GL.getUniformLocation(PROGRAM, "u_lights[1].ambient");
+    GL.uniform3f(lightsUniform, directionalLight.ambient.r, directionalLight.ambient.g, directionalLight.ambient.b);
+    lightsUniform = GL.getUniformLocation(PROGRAM, "u_lights[1].specular");
+    GL.uniform3f(lightsUniform, directionalLight.specular.r, directionalLight.specular.g, directionalLight.specular.b);
+    lightsUniform = GL.getUniformLocation(PROGRAM, "u_lights[1].position");
+    GL.uniform4f(lightsUniform, directionalLight.position[0], directionalLight.position[1], directionalLight.position[2], 0);
+
+    let viewMatrixUniform = GL.getUniformLocation(PROGRAM, "u_vMatrix");
     let vMatrix = camera.getViewMatrix();
     GL.uniformMatrix4fv(viewMatrixUniform, false, vMatrix);
     GL.enableVertexAttribArray(viewMatrixUniform);
 
+    let projectionMatrixUniform = GL.getUniformLocation(PROGRAM, "u_pMatrix");
     let pMatrix = camera.getProjectionMatrix();
     GL.uniformMatrix4fv(projectionMatrixUniform, false, pMatrix);
     GL.enableVertexAttribArray(projectionMatrixUniform);
 
+    let lightingUniform = GL.getUniformLocation(PROGRAM, "u_lighting");
+    let vertexPositionAttribute = GL.getAttribLocation(PROGRAM, "a_vertexPosition");
+    let vertexNormalAttribute = GL.getAttribLocation(PROGRAM, "a_vertexNormal");
+    let vertexColorUniform = GL.getUniformLocation(PROGRAM, "u_vertexColor");
+    let modelMatrixUniform = GL.getUniformLocation(PROGRAM, "u_mMatrix");
+    let normalMatrixUniform = GL.getUniformLocation(PROGRAM, "u_nMatrix");
+
     sceneObjects.forEach((object) => {
+        if(!object.visible) {
+            return;
+        }
+
         let mMatrix = object.getTransformMatrix();
         GL.uniformMatrix4fv(modelMatrixUniform, false, mMatrix);
         GL.enableVertexAttribArray(modelMatrixUniform);
 
+        let nMatrix = object.getNormalMatrix();
+        GL.uniformMatrix4fv(normalMatrixUniform, false, nMatrix);
+        GL.enableVertexAttribArray(normalMatrixUniform);
+
+        let materialUniform = GL.getUniformLocation(PROGRAM, "u_material.diffuse");
+        GL.uniform3f(materialUniform, object.color.r, object.color.g, object.color.b);
+        materialUniform = GL.getUniformLocation(PROGRAM, "u_material.ambient");
+        GL.uniform3f(materialUniform, 1, 1, 1);
+        materialUniform = GL.getUniformLocation(PROGRAM, "u_material.specular");
+        GL.uniform3f(materialUniform, object.color.r, object.color.g, object.color.b);
+        materialUniform = GL.getUniformLocation(PROGRAM, "u_material.shininess");
+        GL.uniform1f(materialUniform, renderParameters["materialShininess"]);
+
         let vertices = object.getVertices();
         let verticesCount = vertices.length / 3;
-        let vertexBuffer = GL.createBuffer();
-        GL.bindBuffer(GL.ARRAY_BUFFER, vertexBuffer);
+        let verticesBuffer = GL.createBuffer();
+        GL.bindBuffer(GL.ARRAY_BUFFER, verticesBuffer);
         GL.bufferData(GL.ARRAY_BUFFER, vertices, GL.STATIC_DRAW);
         GL.vertexAttribPointer(vertexPositionAttribute, 3, GL.FLOAT, false, 0, 0);
         GL.enableVertexAttribArray(vertexPositionAttribute);
 
+        let normals = object.getNormals();
+        let normalsBuffer = GL.createBuffer();
+        GL.bindBuffer(GL.ARRAY_BUFFER, normalsBuffer);
+        GL.bufferData(GL.ARRAY_BUFFER, normals, GL.STATIC_DRAW);
+        GL.vertexAttribPointer(vertexNormalAttribute, 3, GL.FLOAT, false, 0, 0);
+        GL.enableVertexAttribArray(vertexNormalAttribute);
+
         if(renderParameters["drawPolygons"]) {
             let objectColor = object.color.asVector();
+            GL.uniform1i(lightingUniform, renderParameters["drawLight"] && !(object instanceof PointLight));
             GL.uniform4fv(vertexColorUniform, objectColor);
             GL.polygonOffset(0, 0);
             GL.drawArrays(GL.TRIANGLES, 0, verticesCount);
         }
 
         if(renderParameters["drawEdges"]) {
-            let edgeColor = hexToColor(renderParameters["edgeColor"]);
-            GL.uniform4fv(vertexColorUniform, edgeColor.asVector());
+            let edgeColor = hexToColor(renderParameters["edgeColor"]).asVector();
+            GL.uniform1i(lightingUniform, 0);
+            GL.uniform4fv(vertexColorUniform, edgeColor);
             GL.polygonOffset(1, 1);
             GL.drawArrays(GL.LINE_LOOP, 0, verticesCount);
         }
 
-        GL.deleteBuffer(vertexBuffer);
+        GL.deleteBuffer(verticesBuffer);
     });
 }

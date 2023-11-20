@@ -14,63 +14,47 @@ head
         window.onParametersChanged = onParametersChanged;
 
 body.w3-2021-inkwell(onload="onPageLoad()")
-    canvas#canvas.w3-left.w3-margin.w3-border.w3-border-blue(width="800", height="800") Ваш браузер не поддерживает элемент 'canvas'.
+    canvas#canvas.w3-left.w3-margin.w3-border.w3-border-blue(style="background-color: black;", width="800", height="800") Ваш браузер не поддерживает элемент 'canvas'.
     div.w3-left.w3-margin.w3-padding.w3-border.w3-border-white(style="width: 500px;")
         div.w3-xlarge.w3-margin-bottom Объекты
         div.w3-margin-bottom.w3-center
             button.w3-button.w3-border.w3-border-white.w3-margin-right(onclick="createSceneObject('cube')") Создать куб
             button.w3-button.w3-border.w3-border-white.w3-margin-right(onclick="createSceneObject('sphere')") Создать сферу
+            button.w3-button.w3-border.w3-border-white(onclick="createSceneObject('sdr')") Создать СДР
+            div.w3-margin-bottom
             button.w3-button.w3-border.w3-border-white(onclick="clearSceneObjects()") Удалить все
         div#objects
-    div.w3-left.w3-margin.w3-padding.w3-border.w3-border-white(style="width: 500px;")
+    div.w3-left.w3-margin.w3-padding.w3-border.w3-border-white(style="width: 450px;")
         div.w3-xlarge.w3-margin-bottom Специальные настройки
         div.w3-padding.w3-margin-bottom.w3-border.w3-border-white
             div.w3-large Камера
             div.w3-margin-top
                 div
-                    label.w3-left(for="input-x-camera") Положение (X=
+                    label.w3-left Положение (X=
                         span#output-x-camera
-                        label )
-                    input#input-x-camera.w3-right(type="range" min="-10" max="10" step="0.1" value="-10" style="width: 200px;" oninput="onParametersChanged()")
-                br
-                div
-                    label.w3-left(for="input-y-camera") Положение (Y=
+                        label ,&nbsp;
                         span#output-y-camera
-                        label )
-                    input#input-y-camera.w3-right(type="range" min="-10" max="10" step="0.1" value="0" style="width: 200px;" oninput="onParametersChanged()")
-                br
-                div
-                    label.w3-left(for="input-z-camera") Положение (Z=
+                        label ,&nbsp;
                         span#output-z-camera
                         label )
-                    input#input-z-camera.w3-right(type="range" min="-10" max="10" step="0.1" value="0" style="width: 200px;" oninput="onParametersChanged()")
                 br
                 div
-                    label.w3-left(for="input-x-rotation-camera") Поворот (X=
+                    label.w3-left Поворот (X=
                         span#output-x-rotation-camera
-                        label )
-                    input#input-x-rotation-camera.w3-right(type="range" min="0" max="360" step="1" value="0" style="width: 200px;" oninput="onParametersChanged()")
-                br
-                div
-                    label.w3-left(for="input-y-rotation-camera") Поворот (Y=
+                        label ,&nbsp;
                         span#output-y-rotation-camera
-                        label )
-                    input#input-y-rotation-camera.w3-right(type="range" min="0" max="360" step="1" value="0" style="width: 200px;" oninput="onParametersChanged()")
-                br
-                div
-                    label.w3-left(for="input-z-rotation-camera") Поворот (Z=
+                        label ,&nbsp;
                         span#output-z-rotation-camera
                         label )
-                    input#input-z-rotation-camera.w3-right(type="range" min="0" max="360" step="1" value="0" style="width: 200px;" oninput="onParametersChanged()")
                 br
                 div
                     label.w3-left(for="input-fov-camera") Вертикальный FOV (F=
                         span#output-fov-camera
-                        label )
-                    input#input-fov-camera.w3-right(type="range" min="1" max="120" step="1" value="60" style="width: 200px;" oninput="onParametersChanged()")
+                        label ):
+                    input#input-fov-camera.w3-right(type="range" min="1" max="120" step="1" value="60" style="width: 150px; margin-top: 4px;" oninput="onParametersChanged()")
                 br
                 div.w3-margin-bottom
-                    span.w3-left Тип проекции
+                    span.w3-left Тип проекции:
                     br
                     div.w3-right.w3-margin-right
                         label(for="pers-projection") Перспективная проекция&nbsp;&nbsp;&nbsp;
@@ -81,9 +65,79 @@ body.w3-2021-inkwell(onload="onPageLoad()")
                         input#orth-projection(type="radio" name="projection" value="orth" oninput="onParametersChanged()")
                 br
         div.w3-padding.w3-margin-bottom.w3-border.w3-border-white
+            div.w3-large Материал
+            div.w3-margin-top.w3-margin-bottom
+                div
+                    label.w3-left(for="input-shininess") Shininess (S=
+                        span#output-shininess
+                        label ):
+                    input#input-shininess.w3-right(type="range" min="1" max="1000" step="1" value="100" style="width: 200px; margin-top: 4px;" oninput="onParametersChanged()")
+                br
+        div.w3-padding.w3-margin-bottom.w3-border.w3-border-white
+            div.w3-large Точечный свет
+            div.w3-margin-top
+                div
+                    label.w3-left(for="input-x-point-light") Положение (X=
+                        span#output-x-point-light
+                        label )
+                    input#input-x-point-light.w3-right(type="range" min="-10" max="10" step="0.1" value="-5" style="width: 200px; margin-top: 4px;" oninput="onParametersChanged()")
+                br
+                div
+                    label.w3-left(for="input-y-point-light") Положение (Y=
+                        span#output-y-point-light
+                        label )
+                    input#input-y-point-light.w3-right(type="range" min="-10" max="10" step="0.1" value="5" style="width: 200px; margin-top: 4px;" oninput="onParametersChanged()")
+                br
+                div.w3-margin-bottom
+                    label.w3-left(for="input-z-point-light") Положение (Z=
+                        span#output-z-point-light
+                        label )
+                    input#input-z-point-light.w3-right(type="range" min="-10" max="10" step="0.1" value="5" style="width: 200px; margin-top: 4px;" oninput="onParametersChanged()")
+                br
+                div.w3-margin-bottom
+                    label.w3-left(for="input-diffuse-point-light") Диффузный свет
+                    input#input-diffuse-point-light.w3-right(type="color" value="#FFFFFF" style="width: 200px;" oninput="onParametersChanged()")
+                br
+                div.w3-margin-bottom
+                    label.w3-left(for="input-ambient-point-light") Фоновый свет
+                    input#input-ambient-point-light.w3-right(type="color" value="#000000" style="width: 200px;" oninput="onParametersChanged()")
+                br
+        div.w3-padding.w3-margin-bottom.w3-border.w3-border-white
+            div.w3-large Направленный свет
+            div.w3-margin-top
+                div
+                    label.w3-left(for="input-x-directional-light") Направление (X=
+                        span#output-x-directional-light
+                        label )
+                    input#input-x-directional-light.w3-right(type="range" min="-10" max="10" step="0.1" value="5" style="width: 200px; margin-top: 4px;" oninput="onParametersChanged()")
+                br
+                div
+                    label.w3-left(for="input-y-directional-light") Направление (Y=
+                        span#output-y-directional-light
+                        label )
+                    input#input-y-directional-light.w3-right(type="range" min="-10" max="10" step="0.1" value="5" style="width: 200px; margin-top: 4px;" oninput="onParametersChanged()")
+                br
+                div.w3-margin-bottom
+                    label.w3-left(for="input-z-directional-light") Направление (Z=
+                        span#output-z-directional-light
+                        label )
+                    input#input-z-directional-light.w3-right(type="range" min="-10" max="10" step="0.1" value="5" style="width: 200px; margin-top: 4px;" oninput="onParametersChanged()")
+                br
+                div.w3-margin-bottom
+                    label.w3-left(for="input-diffuse-directional-light") Диффузный свет
+                    input#input-diffuse-directional-light.w3-right(type="color" value="#000000" style="width: 200px;" oninput="onParametersChanged()")
+                br
+                div.w3-margin-bottom
+                    label.w3-left(for="input-ambient-directional-light") Фоновый свет
+                    input#input-ambient-directional-light.w3-right(type="color" value="#000000" style="width: 200px;" oninput="onParametersChanged()")
+                br
+        div.w3-padding.w3-margin-bottom.w3-border.w3-border-white
             div.w3-large Настройки рендеринга
             div.w3-margin-top
                 div
+                    label(for="draw-light") Включить свет&nbsp;&nbsp;&nbsp;
+                    input#draw-light(type="checkbox" checked onInput="onParametersChanged()")
+                    br
                     label(for="draw-polygons") Рисовать грани треугольников&nbsp;&nbsp;&nbsp;
                     input#draw-polygons(type="checkbox" checked onInput="onParametersChanged()")
                     br
@@ -92,7 +146,7 @@ body.w3-2021-inkwell(onload="onPageLoad()")
                 br
                 div.w3-margin-bottom
                     label.w3-left(for="input-edge-color") Цвет ребер
-                    input#input-edge-color.w3-right(type="color" value="#000000" style="width: 200px;" oninput="onParametersChanged()")
+                    input#input-edge-color.w3-right(type="color" value="#FFFFFF" style="width: 200px;" oninput="onParametersChanged()")
                 br
                 div.w3-margin-bottom
                     label.w3-left(for="input-background-color") Цвет фона
