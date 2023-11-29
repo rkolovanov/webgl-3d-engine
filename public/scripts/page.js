@@ -55,7 +55,6 @@ export function createSceneObject(type) {
     switch (type) {
         case "cube": typeName = "Куб"; break;
         case "sphere": typeName = "Сфера"; break;
-        case "sdr": typeName = "Поздравление"; break;
     }
 
     if (typeName === null) {
@@ -76,7 +75,7 @@ export function createSceneObject(type) {
                 <input id="input-y-${id}" class="w3-right" type="range" min="-20" max="20" step="0.05" value="0" style="width: 200px;" oninput="onParametersChanged()"/>
             </div>
             <br/>
-            <div>
+            <div class="w3-margin-bottom">
                 <label for="input-z-${id}" class="w3-left">Положение (Z=<span id="output-z-${id}"></span>)</label>
                 <input id="input-z-${id}" class="w3-right" type="range" min="-20" max="20" step="0.01" value="0" style="width: 200px;" oninput="onParametersChanged()"/>
             </div>
@@ -91,7 +90,7 @@ export function createSceneObject(type) {
                 <input id="input-rotation-y-${id}" class="w3-right" type="range" min="0" max="360" step="1" value="0" style="width: 200px;" oninput="onParametersChanged()"/>
             </div>
             <br/>
-            <div>
+            <div class="w3-margin-bottom">
                 <label for="input-rotation-z-${id}" class="w3-left">Поворот (RZ=<span id="output-rotation-z-${id}"></span>)</label>
                 <input id="input-rotation-z-${id}" class="w3-right" type="range" min="0" max="360" step="1" value="0" style="width: 200px;" oninput="onParametersChanged()"/>
             </div>
@@ -106,19 +105,38 @@ export function createSceneObject(type) {
                 <input id="input-scale-y-${id}" class="w3-right" type="range" min="0" max="10" step="0.05" value="1" style="width: 200px;" oninput="onParametersChanged()"/>
             </div>
             <br/>
-            <div>
+            <div class="w3-margin-bottom">
                 <label for="input-scale-z-${id}" class="w3-left">Масштаб (SZ=<span id="output-scale-z-${id}"></span>)</label>
                 <input id="input-scale-z-${id}" class="w3-right" type="range" min="0" max="10" step="0.05" value="1" style="width: 200px;" oninput="onParametersChanged()"/>
             </div>
             <br/>
-            <div>
+            <div style="margin-bottom: 10px;">
+                <label for="input-color-${id}" class="w3-left">Диффузный цвет</label>
+                <input id="input-color-${id}" class="w3-right" type="color" value="${colorToHex(Math.round(Math.random() * 255), Math.round(Math.random() * 255), Math.round(Math.random() * 255))}" style="width: 200px;" oninput="onParametersChanged()"/>
+            </div>
+            <br/>
+            <div class="w3-margin-bottom">
                 <label for="input-alpha-${id}" class="w3-left">Прозрачность (A=<span id="output-alpha-${id}"></span>)</label>
                 <input id="input-alpha-${id}" class="w3-right" type="range" min="0" max="1" step="0.01" value="1" style="width: 200px;" oninput="onParametersChanged()"/>
             </div>
             <br/>
+            <div>
+                <label for="use-texture-${id}">Использовать текстуру&nbsp;&nbsp;&nbsp;</label>
+                <input id="use-texture-${id}" type="checkbox" oninput="onParametersChanged()"/>
+            </div>
+            <div style="margin-bottom: 10px;">
+                <label for="uv-scale-${id}" class="w3-left">Масштаб текстуры</label>
+                <input id="uv-scale-${id}" class="w3-right" type="range" min="0.1" max="5" step="0.1" value="1" style="width: 200px;" oninput="onParametersChanged()"/>
+            </div>
+            <br/>
             <div class="w3-margin-bottom">
-                <label for="input-color-${id}" class="w3-left">Цвет</label>
-                <input id="input-color-${id}" class="w3-right" type="color" value="${colorToHex(Math.round(Math.random() * 255), Math.round(Math.random() * 255), Math.round(Math.random() * 255))}" style="width: 200px;" oninput="onParametersChanged()"/>
+                <label for="texture-${id}" class="w3-left">Текстура</label>
+                <select id="texture-${id}" class="w3-right" type="text" style="width: 200px;" oninput="onParametersChanged()">
+                    <option value="0">Кирпич</option>
+                    <option value="1">Дерево</option>
+                    <option value="2">Гравий</option>
+                    <option value="3">Паймон</option>
+                </select>
             </div>
             <br/>
         </div>
@@ -269,6 +287,13 @@ export function onParametersChanged() {
         SCENE_OBJECTS[i].color = hexToColor(e_c.value);
         SCENE_OBJECTS[i].color.a = Number(e_a.value);
         $(`#output-alpha-${i+1}`).text(e_a.value);
+
+        // Текстура
+        let e_ut = document.getElementById(`use-texture-${i+1}`);
+        let e_t = document.getElementById(`texture-${i+1}`);
+        let e_uv = document.getElementById(`uv-scale-${i+1}`);
+        SCENE_OBJECTS[i].texture = (e_ut.checked) ? Number(e_t.value) : -1;
+        SCENE_OBJECTS[i].textureScale = Number(e_uv.value);
     }
 
     // Цвет заднего фона

@@ -5,6 +5,7 @@ head
     link(rel="stylesheet" href="/public/styles/w3.css")
     link(rel="stylesheet" href="/public/styles/w3-colors-2021.css")
     script(type="text/javascript" src="/public/scripts/third-party/jquery-3.7.1.min.js")
+    script(type="text/javascript" src="/public/scripts/third-party/load-image.all.min.js")
     script(type="module").
         import { onPageLoad, changeAccordionVisibility, createSceneObject, clearSceneObjects, onParametersChanged } from "/public/scripts/page.js";
         window.onPageLoad = onPageLoad;
@@ -20,8 +21,6 @@ body.w3-2021-inkwell(onload="onPageLoad()")
         div.w3-margin-bottom.w3-center
             button.w3-button.w3-border.w3-border-white.w3-margin-right(onclick="createSceneObject('cube')") Создать куб
             button.w3-button.w3-border.w3-border-white.w3-margin-right(onclick="createSceneObject('sphere')") Создать сферу
-            button.w3-button.w3-border.w3-border-white(onclick="createSceneObject('sdr')") Создать СДР
-            div.w3-margin-bottom
             button.w3-button.w3-border.w3-border-white(onclick="clearSceneObjects()") Удалить все
         div#objects
     div.w3-left.w3-margin.w3-padding.w3-border.w3-border-white(style="width: 450px;")
@@ -32,18 +31,18 @@ body.w3-2021-inkwell(onload="onPageLoad()")
                 div
                     label.w3-left Положение (X=
                         span#output-x-camera
-                        label ,&nbsp;
+                        label ,&nbsp;Y=
                         span#output-y-camera
-                        label ,&nbsp;
+                        label ,&nbsp;Z=
                         span#output-z-camera
                         label )
                 br
                 div
                     label.w3-left Поворот (X=
                         span#output-x-rotation-camera
-                        label ,&nbsp;
+                        label ,&nbsp;Y=
                         span#output-y-rotation-camera
-                        label ,&nbsp;
+                        label ,&nbsp;Z=
                         span#output-z-rotation-camera
                         label )
                 br

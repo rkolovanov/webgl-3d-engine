@@ -21,7 +21,7 @@ export function getCanvas() {
 
 /**
  * Возвращает найденный на странице контекст WebGL.
- * @return {WebGLRenderingContext}
+ * @return {WebGL2RenderingContext}
  */
 function getWebGlContext() {
     let canvas = getCanvas();
@@ -29,7 +29,7 @@ function getWebGlContext() {
         return null;
     }
 
-    let context = canvas.getContext("webgl");
+    let context = canvas.getContext("webgl2");
     if (!context) {
         console.error("Не удалось получить контекст WebGL.");
         return null;
@@ -125,6 +125,39 @@ function initializeViewport(gl) {
 }
 
 /**
+ * Загружает текстуры из файлов и передает из в шейдерную программу.
+ */
+function loadTextures(gl) {
+    const texturesCount = 4;
+    const textureIndexMap = {0: gl.TEXTURE0, 1: gl.TEXTURE1, 2: gl.TEXTURE2, 3: gl.TEXTURE3};
+    const getPixelData = (image) => {
+        let canvas = document.createElement('canvas');
+        canvas.width = image.width;
+        canvas.height = image.height;
+
+        let context = canvas.getContext('2d');
+        context.drawImage(image, 0, 0);
+
+        let imageData = context.getImageData(0, 0, image.width, image.height);
+        return new Uint8Array(imageData.data.buffer);
+    };
+
+    for (let i = 0; i < texturesCount; ++i) {
+        loadImage(`/public/textures/${i}.jpg`, (image) => {
+            let texture = gl.createTexture();
+            gl.activeTexture(textureIndexMap[i]);
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+
+            let pixelData = getPixelData(image);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, image.width, image.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, pixelData);
+        });
+    }
+}
+
+/**
  * Инициализирует WebGL.
  */
 export function initializeWebGl() {
@@ -132,6 +165,8 @@ export function initializeWebGl() {
 
     initializeShaderProgram(GL);
     initializeViewport(GL);
+
+    loadTextures(GL);
 
     // Дополнительные функции
     GL.enable(GL.DEPTH_TEST);
@@ -190,10 +225,14 @@ export function renderScene(sceneObjects, camera, pointLight, directionalLight, 
     GL.uniformMatrix4fv(projectionMatrixUniform, false, pMatrix);
     GL.enableVertexAttribArray(projectionMatrixUniform);
 
-    let lightingUniform = GL.getUniformLocation(PROGRAM, "u_lighting");
     let vertexPositionAttribute = GL.getAttribLocation(PROGRAM, "a_vertexPosition");
     let vertexNormalAttribute = GL.getAttribLocation(PROGRAM, "a_vertexNormal");
-    let vertexColorUniform = GL.getUniformLocation(PROGRAM, "u_vertexColor");
+    let texturePositionAttribute = GL.getAttribLocation(PROGRAM, "a_texturePosition");
+
+    let lightingUniform = GL.getUniformLocation(PROGRAM, "u_useLighting");
+    let useTextureUniform = GL.getUniformLocation(PROGRAM, "u_useTexture");
+    let textureUniform = GL.getUniformLocation(PROGRAM, "u_texture");
+    let textureScaleUniform = GL.getUniformLocation(PROGRAM, "u_textureScale");
     let modelMatrixUniform = GL.getUniformLocation(PROGRAM, "u_mMatrix");
     let normalMatrixUniform = GL.getUniformLocation(PROGRAM, "u_nMatrix");
 
@@ -219,6 +258,13 @@ export function renderScene(sceneObjects, camera, pointLight, directionalLight, 
         materialUniform = GL.getUniformLocation(PROGRAM, "u_material.shininess");
         GL.uniform1f(materialUniform, renderParameters["materialShininess"]);
 
+        let useTexture = (object.texture === -1) ? 0 : 1;
+        GL.uniform1i(useTextureUniform, useTexture);
+        if (useTexture) {
+            GL.uniform1i(textureUniform, object.texture);
+            GL.uniform1f(textureScaleUniform, object.textureScale);
+        }
+
         let vertices = object.getVertices();
         let verticesCount = vertices.length / 3;
         let verticesBuffer = GL.createBuffer();
@@ -234,18 +280,26 @@ export function renderScene(sceneObjects, camera, pointLight, directionalLight, 
         GL.vertexAttribPointer(vertexNormalAttribute, 3, GL.FLOAT, false, 0, 0);
         GL.enableVertexAttribArray(vertexNormalAttribute);
 
+        let textureCoordinates = object.getTextureCoordinates();
+        let textureCoordinatesBuffer = GL.createBuffer();
+        GL.bindBuffer(GL.ARRAY_BUFFER, textureCoordinatesBuffer);
+        GL.bufferData(GL.ARRAY_BUFFER, textureCoordinates, GL.STATIC_DRAW);
+        GL.vertexAttribPointer(texturePositionAttribute, 2, GL.FLOAT, false, 0, 0);
+        GL.enableVertexAttribArray(texturePositionAttribute);
+
         if(renderParameters["drawPolygons"]) {
             let objectColor = object.color.asVector();
             GL.uniform1i(lightingUniform, renderParameters["drawLight"] && !(object instanceof PointLight));
-            GL.uniform4fv(vertexColorUniform, objectColor);
             GL.polygonOffset(0, 0);
             GL.drawArrays(GL.TRIANGLES, 0, verticesCount);
         }
 
         if(renderParameters["drawEdges"]) {
-            let edgeColor = hexToColor(renderParameters["edgeColor"]).asVector();
+            let edgeColor = hexToColor(renderParameters["edgeColor"]);
+            let materialUniform = GL.getUniformLocation(PROGRAM, "u_material.diffuse");
+            GL.uniform3f(materialUniform, edgeColor.r, edgeColor.g, edgeColor.b);
             GL.uniform1i(lightingUniform, 0);
-            GL.uniform4fv(vertexColorUniform, edgeColor);
+            GL.uniform1i(useTextureUniform, 0);
             GL.polygonOffset(1, 1);
             GL.drawArrays(GL.LINE_LOOP, 0, verticesCount);
         }

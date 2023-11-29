@@ -2,6 +2,7 @@ import {vec3, vec4, mat4, quat} from "../third-party/gl-matrix/index.js";
 import {K3D} from "../third-party/K3D.js";
 import {Color} from "./color-utils.js"
 import {getCanvas} from "./webgl.js"
+import {toRadian} from "../third-party/gl-matrix/common.js";
 
 /**
  * 3D-объект сцены
@@ -14,13 +15,16 @@ export class SceneObject {
      * @param {Color} color
      */
     constructor(position = vec3.create(), rotation = vec3.create(), scale = vec3.fromValues(1, 1, 1), color = new Color(1, 1, 1, 1)) {
+        this.visible = true;
         this.position = position;
         this.rotation = rotation;
         this.scale = scale;
         this.color = color;
         this.vertices = new Float32Array(0);
         this.normals = new Float32Array(0);
-        this.visible = true;
+        this.textureCoordinates = new Float32Array(0);
+        this.textureScale = 1.0;
+        this.texture = -1;
     }
 
     /**
@@ -33,6 +37,7 @@ export class SceneObject {
             let result = K3D.parse.fromOBJ(rawdata);
             this.vertices = new Float32Array(3 * result.i_verts.length);
             this.normals = new Float32Array(3 * result.i_norms.length);
+            this.textureCoordinates = new Float32Array(2 * result.i_uvt.length);
 
             for(let i = 0; i < result.i_verts.length; ++i) {
                 this.vertices[3 * i] = result.c_verts[3 * result.i_verts[i]];
@@ -44,6 +49,11 @@ export class SceneObject {
                 this.normals[3 * i] = result.c_norms[3 * result.i_norms[i]];
                 this.normals[3 * i + 1] = result.c_norms[3 * result.i_norms[i] + 1];
                 this.normals[3 * i + 2] = result.c_norms[3 * result.i_norms[i] + 2];
+            }
+
+            for(let i = 0; i < result.i_uvt.length; ++i) {
+                this.textureCoordinates[2 * i] = result.c_uvt[2 * result.i_uvt[i]];
+                this.textureCoordinates[2 * i + 1] = result.c_uvt[2 * result.i_uvt[i] + 1];
             }
 
             callback();
@@ -90,6 +100,14 @@ export class SceneObject {
     }
 
     /**
+     * Возвращает UV координаты текстуры 3D-модели
+     * @return {Float32Array}
+     */
+    getTextureCoordinates() {
+        return new Float32Array(this.textureCoordinates);
+    }
+
+    /**
      * Возвращает направление в мировой СК, куда смотрит камера
      * @return {vec3}
      */
@@ -130,7 +148,7 @@ export class Camera extends SceneObject {
     constructor(position = vec3.create(), rotation = vec3.create(), scale = vec3.fromValues(1, 1, 1), color = new Color(1, 1, 1, 1)) {
         super(position, rotation, scale, color);
         this.view_projection = "perspective"
-        this.view_vfov = 90;
+        this.view_vfov = toRadian(60);
         this.view_distance = 1000;
     }
 
@@ -152,10 +170,10 @@ export class Camera extends SceneObject {
     getProjectionMatrix() {
         if(this.view_projection === "perspective") {
             let aspectRatio = getCanvas().width / getCanvas().height;
-            return mat4.perspective(mat4.create(), this.view_vfov, aspectRatio, 0.1, this.view_distance);
+            return mat4.perspective(mat4.create(), this.view_vfov, aspectRatio, 0.01, this.view_distance);
         } else if(this.view_projection === "orthogonal") {
             let boxSize = 5;
-            return mat4.ortho(mat4.create(), -boxSize, boxSize, -boxSize, boxSize, 0.1, this.view_distance);
+            return mat4.ortho(mat4.create(), -boxSize, boxSize, -boxSize, boxSize, 0.01, this.view_distance);
         } else {
             return mat4.create();
         }
