@@ -31,7 +31,7 @@ function getWebGlContext() {
 
     let context = canvas.getContext("webgl2");
     if (!context) {
-        console.error("Не удалось получить контекст WebGL.");
+        console.error("Не удалось получить контекст WebGL 2.");
         return null;
     }
     return context;
@@ -288,7 +288,6 @@ export function renderScene(sceneObjects, camera, pointLight, directionalLight, 
         GL.enableVertexAttribArray(texturePositionAttribute);
 
         if(renderParameters["drawPolygons"]) {
-            let objectColor = object.color.asVector();
             GL.uniform1i(lightingUniform, renderParameters["drawLight"] && !(object instanceof PointLight));
             GL.polygonOffset(0, 0);
             GL.drawArrays(GL.TRIANGLES, 0, verticesCount);
